@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Scrabble Match</title>
+</head>
+<body>
+Grid (
+<label id="cols"></label>
+x
+<label id="rows"></label>
+)
+<a href="#newMatch" onclick="newMatch(); return false;">New Match</a> |
+<a href="#addUser" onclick="addUser(); return false;">Add User</a> |
+<a href="#playHistory" onclick="showPlayHistory(); return false;">Play History</a> |
+<a href="#gridSize" onclick="updateGridSize(); return false;">Resize Grid</a> |
+
+<hr />
+
+<select id="users">
+	
+</select>
+
+<select id="col">
+	<option value="0">A</option>
+	<option value="1">B</option>
+	<option value="2">C</option>
+	<option value="3">D</option>
+	<option value="4">E</option>
+	<option value="5">F</option>
+	<option value="6">G</option>
+	<option value="7">H</option>
+	<option value="8">I</option>
+	<option value="9">J</option>
+	<option value="10">K</option>
+	<option value="11">L</option>
+	<option value="12">M</option>
+	<option value="13">N</option>
+	<option value="14">O</option>
+	<option value="15">P</option>
+	<option value="16">Q</option>
+	<option value="17">R</option>
+	<option value="18">S</option>
+	<option value="19">T</option>
+	<option value="20">U</option>
+	<option value="21">V</option>
+	<option value="22">W</option>
+	<option value="23">X</option>
+	<option value="24">Y</option>
+	<option value="25">Z</option>
+</select>
+<select id="row">
+	<option>01</option>
+	<option>02</option>
+	<option>03</option>
+	<option>04</option>
+	<option>05</option>
+	<option>06</option>
+	<option>07</option>
+	<option>08</option>
+	<option>09</option>
+	<option>10</option>
+	<option>11</option>
+	<option>12</option>
+	<option>13</option>
+	<option>14</option>
+	<option>15</option>	
+</select>
+<select id="position">
+<option>Horizontal</option>
+<option>Vertical</option>
+</select>
+<input type="text" id="word" />
+<button onclick="playWord(); return false;">Play Word</button>
+
+<pre id="grid">
+</pre>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script>
+var endpoint = "/Scrabble/Service";
+
+function newMatch(){
+	var sure = confirm("Are you sure you want to start a new match?");
+	if(sure){
+		var xhr = $.get(endpoint + '?action=newMatch', function(){
+			updateGrid();
+			updateUserList();
+			$('#word').val('');
+		});
+	}
+}
+
+function updateGridSize(){
+	var size = prompt("Enter grid size (x,y)");
+	if(size){
+		var dim = size.split(',');
+		if(dim.length==2){
+			var width = dim[0].trim();
+			var height = dim[1].trim();
+			var xhr = $.get(endpoint + '?action=updateGridSize&row='+height+'&col='+width, function(){
+				 updateGrid();
+			});
+		}
+	}
+}
+
+function addUser(){
+	var user = prompt("Username:");
+	if(user){
+		var xhr = $.get(endpoint + '?action=addUser&user='+user, function(){
+			updateUserList();
+			alert(user +  " has been added to game!");
+		});
+	}
+}
+
+function getUsers(cb){
+	var xhr = $.get(endpoint + '?action=getUsers', function(){
+		if(cb) cb(xhr.responseText);
+	});
+}
+
+function getGridSize(cb){
+	var xhr = $.get(endpoint + '?action=getGridSize', function(){
+		if(cb) cb(xhr.responseText);
+	});
+}
+
+function showPlayHistory(){
+	getPlayHistory(function(hist){
+		alert(hist);
+	});
+}
+
+function getPlayHistory(cb){
+	var xhr = $.get(endpoint + '?action=getPlayHistory', function(){
+		if(cb) cb(xhr.responseText);
+	});
+}
+
+function playWord(){
+	var word = $("#word").val();
+	var col = $('#col').val();
+	var row = $('#row').val();
+	var user = $('#users').val();
+	var position=$('#position').val();
+	var xhr = $.get(endpoint, { 
+		action: 'addWord', 
+		user: user, 
+		word: word, 
+		col: col, 
+		row: row, 
+		position: position
+		}, function(){
+		
+		$('#word').val('');
+		
+		if(!xhr.responseText) {
+			alert('Word cannot be played!');
+		}else{
+			if(xhr.responseText == "word not found"){
+				alert("Word not known!");
+			}
+		}
+		updateGrid();
+		
+	});
+	
+}
+
+function updateUserList(){
+	var userList = document.getElementById('users');
+	userList.innerHTML = '';
+	getUsers(function(users){
+		var list = users.split('\n');
+		for(var i in list) {
+			userList.innerHTML += '<option>' + list[i] + '</option>';
+		}
+	});
+}
+
+function updateGrid(){
+	var xhr = $.get(endpoint + '?action=getGrid', function(){
+		document.getElementById('grid').innerHTML = xhr.responseText;
+		getGridSize(function(size){
+			var dim = size.split('\n');
+			var w = dim[0];
+			var h = dim[1];
+			$('#cols').html(w);
+			$('#rows').html(h);			
+		});
+		
+	});
+}
+
+$(document).ready(function(){
+	
+	updateGrid();
+	
+	updateUserList();
+	
+});
+
+</script>
+</body>
+</html>

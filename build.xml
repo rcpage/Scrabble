@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Scrabble" default="pkg-ears" basedir=".">
+
+	<property name="project-name" value="${ant.project.name}" />
+	<property name="builder" value="Russell Page" />
+	
+	<property name="debuglevel" value="source,lines,vars"/>
+	<property name="target" value="1.7"/>
+	<property name="source" value="1.7"/>
+	
+	<property name="war-file-name" value="${project-name}.war" />
+	
+	<property name="dev-ear-file-name" value="${project-name}-dev.ear" />
+	<property name="test-ear-file-name" value="${project-name}-test.ear" />
+	<property name="prod-ear-file-name" value="${project-name}-prod.ear" />
+	
+	<property name="build-directory" value="build" />
+	<property name="source-directory" value="src" />
+	<property name="classes-directory" value="build/classes" />
+	<property name="web-directory" value="WebContent" />
+	<property name="web-xml-file" value="WebContent/WEB-INF/web.xml" />
+	
+	<tstamp prefix="build-info">
+		<format property="current-date" pattern="d-MMMM-yyyy" locale="en" />
+		<format property="current-time" pattern="hh:mm:ss a z" locale="en" />
+	</tstamp>
+	
+
+	<path id="scrabble.web.lib.classpath">
+		
+	</path>
+	
+	<path id="scrabble.classpath">
+		<path refid="scrabble.web.lib.classpath"/>
+		<pathelement location="apache-tomcat-9.0.10/lib/servlet-api.jar"/>
+	</path>
+	
+	<target name="clean">
+		<delete dir="./build" verbose="true"/>
+		<delete dir="${web-directory}/WEB-INF/classes" verbose="true"/>
+	</target>
+	
+	<target name="prepare" depends="clean">
+		<mkdir dir="${build-directory}" />
+		<mkdir dir="build/classes"/>
+		<mkdir dir="build/dev"/>
+		<mkdir dir="build/test"/>
+		<mkdir dir="build/prod"/>
+		<mkdir dir="${web-directory}/WEB-INF/classes"/>
+	</target>
+	
+	<target name="build-project" depends="prepare">
+			<echo message="${ant.project.name}: ${ant.file}"/>
+		    <javac debug="true" debuglevel="${debuglevel}" destdir="build/classes" source="${source}" target="${target}" >
+		            <src path="src"/>
+		            <classpath refid="scrabble.classpath"/>
+		    </javac>
+			<copy todir="${web-directory}/WEB-INF/classes" overwrite="true">
+				<fileset dir="build/classes"/>
+			</copy>
+	</target>
+	
+	<target name="pkg-war-dev" depends="build-project">
+		<copy overwrite="true" file="${web-directory}/WEB-INF/scrabble.dev.properties" tofile="${web-directory}/WEB-INF/scrabble.properties"/>
+		<war warfile="${build-directory}/dev/${war-file-name}" webxml="${web-xml-file}">
+			<fileset dir="${web-directory}">
+				<!-- Need to exclude it since webxml is an attribute of the war tag above -->
+				<exclude name="WEB-INF/web.xml" />
+				<exclude name="WEB-INF/scrabble.dev.properties" />
+				<exclude name="WEB-INF/scrabble.test.properties" />
+				<exclude name="WEB-INF/scrabble.prod.properties" />
+			</fileset>
+			<manifest>
+				<attribute name="Built-By" value="${builder}" />
+				<attribute name="Built-On" value="${build-info.current-date}" />
+				<attribute name="Built-At" value="${build-info.current-time}" />
+			</manifest>
+		</war>
+	</target>
+	
+	<target name="pkg-war-test" depends="pkg-war-dev">
+		<copy overwrite="true" file="${web-directory}/WEB-INF/scrabble.test.properties" tofile="${web-directory}/WEB-INF/scrabble.properties"/>
+		<war warfile="${build-directory}/test/${war-file-name}" webxml="${web-xml-file}">
+			<fileset dir="${web-directory}">
+				<!-- Need to exclude it since webxml is an attribute of the war tag above -->
+				<exclude name="WEB-INF/web.xml" />
+				<exclude name="WEB-INF/scrabble.dev.properties" />
+				<exclude name="WEB-INF/scrabble.test.properties" />
+				<exclude name="WEB-INF/scrabble.prod.properties" />
+			</fileset>
+			<manifest>
+				<attribute name="Built-By" value="${builder}" />
+				<attribute name="Built-On" value="${build-info.current-date}" />
+				<attribute name="Built-At" value="${build-info.current-time}" />
+			</manifest>
+		</war>
+	</target>
+
+	<target name="pkg-war-prod" depends="pkg-war-test">
+		<copy overwrite="true" file="${web-directory}/WEB-INF/scrabble.prod.properties" tofile="${web-directory}/WEB-INF/scrabble.properties"/>
+			<war warfile="${build-directory}/prod/${war-file-name}" webxml="${web-xml-file}">
+				<fileset dir="${web-directory}">
+					<!-- Need to exclude it since webxml is an attribute of the war tag above -->
+					<exclude name="WEB-INF/web.xml" />
+					<exclude name="WEB-INF/scrabble.dev.properties" />
+					<exclude name="WEB-INF/scrabble.test.properties" />
+					<exclude name="WEB-INF/scrabble.prod.properties" />
+				</fileset>
+				<manifest>
+					<attribute name="Built-By" value="${builder}" />
+					<attribute name="Built-On" value="${build-info.current-date}" />
+					<attribute name="Built-At" value="${build-info.current-time}" />
+				</manifest>
+			</war>
+	</target>
+	
+	<target name="pkg-wars" depends="pkg-war-prod">
+		<echo message="Packaging WARs..." />
+	</target>
+	
+	<target name="pkg-ears" depends="pkg-wars">
+		<ear destfile="${build-directory}/${dev-ear-file-name}" appxml="application.xml">
+			<fileset dir="${build-directory}/dev" includes="*.war"/>
+		</ear>
+		
+		<ear destfile="${build-directory}/${test-ear-file-name}" appxml="application.xml">
+			<fileset dir="${build-directory}/test" includes="*.war"/>
+		</ear>
+			
+		<ear destfile="${build-directory}/${prod-ear-file-name}" appxml="application.xml">
+			<fileset dir="${build-directory}/prod" includes="*.war"/>
+		</ear>
+	</target>
+	
+	<target name="set-env-dev">
+		<copy verbose="true" overwrite="true" file="${web-directory}/WEB-INF/scrabble.dev.properties" tofile="${web-directory}/WEB-INF/scrabble.properties"/>
+	</target>
+	
+	<target name="set-env-test">
+		<copy verbose="true" overwrite="true" file="${web-directory}/WEB-INF/scrabble.test.properties" tofile="${web-directory}/WEB-INF/scrabble.properties"/>
+	</target>
+	
+	<target name="set-env-prod">
+		<copy verbose="true" overwrite="true" file="${web-directory}/WEB-INF/scrabble.prod.properties" tofile="${web-directory}/WEB-INF/scrabble.properties"/>
+	</target>
+</project>
